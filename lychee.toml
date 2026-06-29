@@ -2,11 +2,15 @@
 max_retries = 2
 accept = [200, 206, 429]
 
-# Disposable lab / documentation placeholders that are not meant to resolve.
+# Disposable lab / documentation placeholders that are not meant to resolve,
+# plus our own release assets and GHCR package page (published by other jobs,
+# may be private or race this check — not doc links to verify).
 exclude = [
   "example\\.com",
   "lab\\.local",
   "kms\\.example\\.com",
   "127\\.0\\.0\\.1",
   "localhost",
+  "github\\.com/oriolrius/ssh-ca-cosmian-kms/releases/download/",
+  "github\\.com/oriolrius/ssh-ca-cosmian-kms/pkgs/container/",
 ]
