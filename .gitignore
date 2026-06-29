@@ -6,6 +6,9 @@ poc-data/
 *.deb
 *.zip
 
+# --- Generated PDF (built by CI from docs/technical-reference.md) ---
+*.pdf
+
 # --- Internal tooling metadata ---
 .engram/
 

@@ -1,0 +1,81 @@
+name: Build technical-reference PDF
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/build-pdf.yml'
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/build-pdf.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-pdf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pin pandoc to the version the template was authored against (2.9.2.1)
+      # so the build is reproducible regardless of the runner's apt version.
+      - name: Install pandoc 2.9.2.1
+        run: |
+          curl -fsSL -o /tmp/pandoc.deb \
+            https://github.com/jgm/pandoc/releases/download/2.9.2.1/pandoc-2.9.2.1-1-amd64.deb
+          sudo dpkg -i /tmp/pandoc.deb
+          pandoc --version | head -1
+
+      - name: Install TeX Live (xelatex) + fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-xetex \
+            texlive-latex-extra \
+            texlive-latex-recommended \
+            texlive-fonts-recommended \
+            fonts-liberation \
+            fonts-dejavu-core
+          sudo fc-cache -f
+
+      - name: Build PDF
+        run: |
+          bash docs/pdf/build.sh ssh-ca-technical-reference.pdf
+          ls -la ssh-ca-technical-reference.pdf
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ssh-ca-technical-reference-pdf
+          path: ssh-ca-technical-reference.pdf
+          if-no-files-found: error
+
+      # Stable download URL on every push to main:
+      #   .../releases/download/latest/ssh-ca-technical-reference.pdf
+      - name: Publish "latest" release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Technical Reference (latest build)
+          body: >-
+            Auto-generated PDF of the SSH CA technical reference, built from the
+            canonical Markdown source (`docs/technical-reference.md`) on the
+            latest `main`.
+          files: ssh-ca-technical-reference.pdf
+
+      # Versioned release when a v* tag is pushed.
+      - name: Publish tagged release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ssh-ca-technical-reference.pdf

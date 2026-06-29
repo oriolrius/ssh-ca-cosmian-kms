@@ -4,25 +4,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Contents
 
-- **`docs/technical-reference.docx`** — Comprehensive technical reference (editable source): certificate format internals, 6-step sshd verification chain, host/user certificate workflows, KRL revocation, Ansible automation (Jan-Piet Mens' pattern), Cosmian KMS/PKCS#11 integration.
-- **`docs/technical-reference.md`** — Markdown rendering of the above, for browsing on GitHub. Figures live in `docs/media/`.
+- **`docs/technical-reference.md`** — Comprehensive technical reference and **canonical source**: certificate format internals, 6-step sshd verification chain, host/user certificate workflows, KRL revocation, Ansible automation (Jan-Piet Mens' pattern), Cosmian KMS/PKCS#11 integration. Figures live in `docs/media/`.
 - **`docs/poc-validation.md`** — Docker-based PoC validating all 9 use cases (UC1–UC9): CA key lifecycle in KMS, host/user cert signing, TOFU elimination, RBAC via principals, PTY denial, force-command, expiry, and KRL revocation.
 - **`docs/krl-distribution.md`** — Design for a stateless, encrypted REST service that distributes per-host KRLs (ECIES encryption + ECDSA signing, all crypto delegated to KMS).
+- **`docs/pdf/`** — PDF build pipeline: pandoc + xelatex `template.tex`, `preamble.tex`, two Lua filters (`table-widths.lua`, `center-figures.lua`), and `build.sh`.
+- **`.github/workflows/build-pdf.yml`** — CI that builds the PDF and publishes it to the `latest` GitHub release.
 - **`PLAN.md`** — Prioritized roadmap of suggested improvements.
 
 ## Working with the technical reference
 
-The `.docx` is the editable source of truth. Read its contents with:
-```bash
-pandoc --track-changes=all docs/technical-reference.docx -o output.md
-```
+`docs/technical-reference.md` is the single source of truth — edit the Markdown directly. **Do not reintroduce a `.docx`**; the reference is Markdown-first now.
 
-Edit the document using the `document-skills:docx` skill (redlining workflow for substantive edits, direct OOXML editing for minor changes). After substantive edits, regenerate the Markdown rendering:
+Rebuild the PDF after edits (CI does this automatically on push to `main`):
 ```bash
-pandoc docs/technical-reference.docx -o docs/technical-reference.md \
-  --track-changes=accept --extract-media=docs --wrap=none
-sed -i 's#](docs/media/#](media/#g' docs/technical-reference.md
+docs/pdf/build.sh            # -> docs/technical-reference.pdf
 ```
+All PDF styling (Letter paper, Liberation Sans body, navy/blue headings, grey monospace code boxes, inline never-split diagrams) lives in `docs/pdf/`. The generated `*.pdf` is git-ignored — CI publishes it to Releases. The build pins pandoc 2.9.2.1 to match `template.tex`.
 
 ## Document Structure
 

@@ -1,0 +1,93 @@
+% ============================================================
+% preamble.tex — visual styling to match the original .docx.
+% Used by docs/pdf/build.sh via `pandoc -H`. Engine: xelatex.
+% Letter / 1in margins, Arial-compatible sans, navy title /
+% blue headings, running header + page footer, grey monospace
+% code boxes, and diagrams fitted so they never split.
+% ============================================================
+
+% ---- Fonts: Arial-compatible body, Unicode-rich monospace ----
+\usepackage{fontspec}
+\setmainfont{Liberation Sans}
+\setmonofont{DejaVu Sans Mono}[Scale=0.80]
+
+% ---- Colours sampled from the .docx ----
+\usepackage{xcolor}
+\definecolor{titlenavy}{HTML}{1B3A5C}
+\definecolor{headblue}{HTML}{2B5797}
+\definecolor{bodygray}{HTML}{2D2D2D}
+\definecolor{rulegray}{HTML}{BFBFBF}
+\definecolor{captiongray}{HTML}{666666}
+\definecolor{codebg}{HTML}{F4F4F4}
+\definecolor{coderule}{HTML}{E2E2E2}
+\definecolor{shadecolor}{HTML}{F4F4F4} % in case pandoc uses the Shaded env
+\AtBeginDocument{\color{bodygray}}
+
+% ---- Map a few glyphs Liberation Sans may lack ----
+\usepackage{newunicodechar}
+\newunicodechar{→}{\textrightarrow}
+\newunicodechar{←}{\textleftarrow}
+
+% ---- Page geometry (Letter, 1in margins, like the .docx) ----
+\usepackage[letterpaper,margin=1in,headheight=16pt,headsep=14pt,footskip=30pt]{geometry}
+
+% ---- No LaTeX section numbers (headings already carry "1.", "4.1", ...) ----
+\setcounter{secnumdepth}{-1}
+\setcounter{tocdepth}{3}
+
+% ---- Heading styles (blue, bold, sans) ----
+\usepackage{titlesec}
+\titleformat{\section}{\sffamily\bfseries\color{headblue}\LARGE}{}{0pt}{}
+\titleformat{\subsection}{\sffamily\bfseries\color{headblue}\large}{}{0pt}{}
+\titleformat{\subsubsection}{\sffamily\bfseries\color{headblue}\normalsize}{}{0pt}{}
+\titlespacing*{\section}{0pt}{22pt}{8pt}
+\titlespacing*{\subsection}{0pt}{15pt}{5pt}
+\titlespacing*{\subsubsection}{0pt}{12pt}{4pt}
+
+% ---- Running header + page-number footer (grey rules) ----
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\itshape\footnotesize\color{captiongray}OpenSSH Certificate Authority — Technical Reference}
+\fancyfoot[C]{\footnotesize\color{captiongray}Page \thepage\ of \pageref{LastPage}}
+\renewcommand{\headrule}{{\color{rulegray}\hrule height0.4pt}}
+\renewcommand{\footrule}{{\color{rulegray}\hrule height0.4pt}}
+
+% ---- Code blocks: light-grey box, monospace, page-breakable ----
+\usepackage{mdframed}
+\usepackage{etoolbox}
+\mdfsetup{
+  backgroundcolor=codebg,
+  linecolor=coderule,
+  linewidth=0.4pt,
+  leftmargin=0pt, rightmargin=0pt,
+  innerleftmargin=8pt, innerrightmargin=8pt,
+  innertopmargin=6pt, innerbottommargin=6pt,
+  skipabove=8pt, skipbelow=8pt,
+}
+\BeforeBeginEnvironment{verbatim}{\begin{mdframed}}
+\AfterEndEnvironment{verbatim}{\end{mdframed}}
+\makeatletter
+\renewcommand{\verbatim@font}{\ttfamily\small\color{bodygray}}
+\makeatother
+
+% ---- Images: fit width, never exceed (so diagrams never split) ----
+\usepackage{graphicx}
+\setkeys{Gin}{width=\linewidth,height=0.85\textheight,keepaspectratio}
+
+% ---- Tables smaller so wide reference tables fit within the margins ----
+\AtBeginEnvironment{longtable}{\footnotesize}
+
+% ---- Links ----
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=headblue,urlcolor=headblue,citecolor=headblue}
+
+% ---- Readability ----
+% Left-aligned (ragged right) body, matching the .docx — and avoids
+% overfull lines from long unbreakable paths/identifiers.
+\usepackage[document]{ragged2e}
+\linespread{1.05}
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{3em} % let TeX resolve long unbreakable paths

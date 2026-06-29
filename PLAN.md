@@ -98,12 +98,16 @@ The two themes that run through everything:
 
 ## P2 — Documentation & repo quality
 
-### 2.1 Keep the `.docx` and `.md` in sync automatically
-- **Why:** two sources drift. Right now the `.md` is a manual pandoc render.
-- **Steps:** a GitHub Action that regenerates `docs/technical-reference.md` (and
-  `docs/media/`) from the `.docx` on push and fails if the committed `.md` is
-  stale — or, alternatively, promote Markdown to the canonical source and drop
-  the `.docx`.
+### 2.1 Single-source Markdown + CI-built PDF — ✅ Done
+- **Implemented:** Markdown (`docs/technical-reference.md`) is now the canonical
+  source and the `.docx` has been removed. Its headings, code blocks (recovered
+  with exact indentation), and figure captions were promoted to real Markdown.
+  A GitHub Actions workflow (`.github/workflows/build-pdf.yml`) builds a styled
+  PDF from the Markdown on every push to `main` (pandoc + xelatex; styling in
+  `docs/pdf/`), reproducing the original document's look and feel — Letter paper,
+  navy/blue headings, grey code boxes, inline diagrams that never split across
+  pages — and publishes it to the `latest` release. Build locally with
+  `docs/pdf/build.sh`.
 
 ### 2.2 Diagram sources, not just PNGs
 - **Why:** the four figures are embedded PNGs with no editable source.
