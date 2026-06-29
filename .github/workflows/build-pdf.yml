@@ -1,4 +1,4 @@
-name: Build technical-reference PDF
+name: Build PDFs
 
 on:
   push:
@@ -26,6 +26,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       # Pin pandoc to the version the template was authored against (2.9.2.1)
       # so the build is reproducible regardless of the runner's apt version.
       - name: Install pandoc 2.9.2.1
@@ -35,48 +39,53 @@ jobs:
           sudo dpkg -i /tmp/pandoc.deb
           pandoc --version | head -1
 
-      - name: Install TeX Live (xelatex) + fonts
+      - name: Install TeX Live, fonts, and headless-chrome libs (for Mermaid)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            texlive-xetex \
-            texlive-latex-extra \
-            texlive-latex-recommended \
-            texlive-fonts-recommended \
-            lmodern \
-            fonts-liberation \
-            fonts-dejavu-core
+            texlive-xetex texlive-latex-extra texlive-latex-recommended \
+            texlive-fonts-recommended lmodern fonts-liberation fonts-dejavu-core \
+            libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libdrm2 \
+            libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+            libgbm1 libpango-1.0-0 libcairo2 libasound2t64
           sudo fc-cache -f
 
-      - name: Build PDF
+      - name: Build PDFs
         run: |
-          bash docs/pdf/build.sh ssh-ca-technical-reference.pdf
-          ls -la ssh-ca-technical-reference.pdf
+          bash docs/pdf/build.sh
+          cp docs/technical-reference.pdf ssh-ca-technical-reference.pdf
+          cp docs/poc-validation.pdf      ssh-ca-poc-validation.pdf
+          cp docs/krl-distribution.pdf    ssh-ca-krl-distribution.pdf
+          ls -la ssh-ca-*.pdf
 
-      - name: Upload PDF artifact
+      - name: Upload PDF artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ssh-ca-technical-reference-pdf
-          path: ssh-ca-technical-reference.pdf
+          name: ssh-ca-pdfs
+          path: ssh-ca-*.pdf
           if-no-files-found: error
 
-      # Stable download URL on every push to main:
+      # Stable download URLs on every push to main, e.g.
       #   .../releases/download/latest/ssh-ca-technical-reference.pdf
       - name: Publish "latest" release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Technical Reference (latest build)
+          name: Documentation PDFs (latest build)
           body: >-
-            Auto-generated PDF of the SSH CA technical reference, built from the
-            canonical Markdown source (`docs/technical-reference.md`) on the
-            latest `main`.
-          files: ssh-ca-technical-reference.pdf
+            Auto-generated PDFs built from the canonical Markdown sources under
+            `docs/` on the latest `main`.
+          files: |
+            ssh-ca-technical-reference.pdf
+            ssh-ca-poc-validation.pdf
+            ssh-ca-krl-distribution.pdf
 
-      # Versioned release when a v* tag is pushed.
       - name: Publish tagged release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ssh-ca-technical-reference.pdf
+          files: |
+            ssh-ca-technical-reference.pdf
+            ssh-ca-poc-validation.pdf
+            ssh-ca-krl-distribution.pdf
