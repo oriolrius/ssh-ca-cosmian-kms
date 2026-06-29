@@ -8,13 +8,12 @@ labels: [enhancement, triage]
 <!--
 This is a documentation + proof-of-concept project. Proposals that improve
 fidelity to the documented architecture (dual CA, KMS PKCS#11 signing, short
-TTLs, KRL) are especially welcome. See PLAN.md for the current roadmap.
+TTLs, KRL) are especially welcome.
 -->
 
 ## Problem / motivation
 
-What problem would this solve, or what is missing today? Link to PLAN.md items
-if relevant.
+What problem would this solve, or what is missing today?
 
 ## Proposed solution
 

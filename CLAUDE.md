@@ -13,7 +13,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **`services/krl-distributor/`** — FastAPI reference implementation of `docs/krl-distribution.md` (KMS-backed; `uv run pytest` for the mocked tests).
 - **`ansible/`** — `ssh_host_cert` role automating host-cert issuance (dual-CA + KMS); passes `ansible-lint --profile production`.
 - **`examples/`** — Sanitized `sshd_config.d`, `auth_principals`, `ssh_config.d`, `known_hosts`, `cosmian.toml`.
-- **`PLAN.md`** — Roadmap; P0/P1/P2 are complete, P3 are optional.
 
 ## Local checks (mirror CI)
 

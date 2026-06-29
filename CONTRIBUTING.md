@@ -14,7 +14,6 @@ Please read this guide before opening an issue or pull request.
 .
 ├── README.md                          Project overview
 ├── LICENSE                            MIT
-├── PLAN.md                            Roadmap / suggested improvements
 ├── CLAUDE.md                          Guidance for working in this repo
 ├── SECURITY.md                        Security policy & private reporting
 ├── CONTRIBUTING.md                    This file

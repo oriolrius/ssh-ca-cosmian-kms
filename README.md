@@ -6,6 +6,7 @@
 [![CI](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/ci.yml/badge.svg)](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/ci.yml)
 [![Docs](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/docs.yml/badge.svg)](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/docs.yml)
 [![Security](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/security.yml/badge.svg)](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/security.yml)
+[![Docker image](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/docker.yml/badge.svg)](https://github.com/oriolrius/ssh-ca-cosmian-kms/pkgs/container/ssh-ca-cosmian-kms%2Fkrl-distributor)
 [![Download PDF](https://img.shields.io/badge/download-PDF-red.svg)](https://github.com/oriolrius/ssh-ca-cosmian-kms/releases/download/latest/ssh-ca-technical-reference.pdf)
 
 A practitioner-grade reference for replacing per-host SSH keys with **OpenSSH
@@ -39,7 +40,7 @@ restrictions, and a human-attributable audit trail.
 
 ```text
 .
-├── README.md / LICENSE / PLAN.md / CLAUDE.md
+├── README.md / LICENSE / CLAUDE.md
 ├── CONTRIBUTING.md / SECURITY.md / CHANGELOG.md
 ├── .github/workflows/      build-pdf · ci · docs · security
 ├── docs/
@@ -57,17 +58,15 @@ restrictions, and a human-attributable audit trail.
 
 ## Documentation
 
-- **[Technical reference](docs/technical-reference.md)** — the full architecture,
-  cryptographic internals, configuration, and automation guide. This Markdown
-  file is the **canonical source**; a polished PDF (same look and feel, with the
-  diagrams inline) is built from it by CI —
-  **[download the latest PDF](https://github.com/oriolrius/ssh-ca-cosmian-kms/releases/download/latest/ssh-ca-technical-reference.pdf)**.
-- **[PoC validation](docs/poc-validation.md)** — a reproducible, Docker-based
-  proof of concept that validates nine use cases (UC1–UC9) end to end, with the
-  captured `sshd` log lines that prove each one.
-- **[KRL distribution design](docs/krl-distribution.md)** — a stateless,
-  encrypted REST service that distributes per-host revocation lists using KMS for
-  all crypto (ECIES encryption + ECDSA signing), holding no secrets itself.
+The Markdown files are the **canonical sources**; CI builds a polished PDF of
+each (same look and feel, diagrams inline) and attaches them to the
+[`latest` release](https://github.com/oriolrius/ssh-ca-cosmian-kms/releases/tag/latest).
+
+| Document | Read | Download |
+|---|---|---|
+| **Technical reference** — architecture, crypto internals, configuration, automation | [Markdown](docs/technical-reference.md) | [PDF](https://github.com/oriolrius/ssh-ca-cosmian-kms/releases/download/latest/ssh-ca-technical-reference.pdf) |
+| **PoC validation** — reproducible Docker walkthrough of UC1–UC9 | [Markdown](docs/poc-validation.md) | [PDF](https://github.com/oriolrius/ssh-ca-cosmian-kms/releases/download/latest/ssh-ca-poc-validation.pdf) |
+| **KRL distribution design** — stateless, encrypted REST delivery via KMS | [Markdown](docs/krl-distribution.md) | [PDF](https://github.com/oriolrius/ssh-ca-cosmian-kms/releases/download/latest/ssh-ca-krl-distribution.pdf) |
 
 ## Quick start
 
@@ -152,7 +151,7 @@ docs/pdf/build.sh            # writes docs/technical-reference.pdf
 The PDF styling lives in `docs/pdf/` (`template.tex`, `preamble.tex`, and two
 Lua filters for table widths and figure centering).
 
-See [PLAN.md](PLAN.md) for the suggested roadmap.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and [CHANGELOG.md](CHANGELOG.md) for the history.
 
 ## License
 
