@@ -40,13 +40,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install headless-chrome libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libdrm2 \
+            libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+            libgbm1 libpango-1.0-0 libcairo2 libasound2t64
       - name: Render Mermaid diagrams to PNG
         run: |
-          chmod 777 docs/diagrams   # let the image's user write the PNGs here
           for f in docs/diagrams/*.mmd; do
-            docker run --rm -v "$PWD:/data" \
-              minlag/mermaid-cli -i "/data/$f" -o "/data/${f%.mmd}.png" \
-              -p /data/docs/diagrams/puppeteer-config.json
+            npx -y @mermaid-js/mermaid-cli -i "$f" -o "${f%.mmd}.png" \
+              -p docs/diagrams/puppeteer-config.json
           done
       - uses: actions/upload-artifact@v4
         with:
