@@ -1,0 +1,39 @@
+# --- PoC runtime state (contains private keys, host keys, KMS database) ---
+# Regenerate by following docs/poc-validation.md. NEVER commit this directory.
+poc-data/
+
+# --- Large/derivable binaries ---
+*.deb
+*.zip
+
+# --- Internal tooling metadata ---
+.engram/
+
+# --- Secrets & key material (defense in depth — never track these anywhere) ---
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ecdsa*
+id_ed25519*
+*ssh-ca
+*ssh-ca.pub
+known_hosts
+*.db
+*.sqlite
+*.sqlite3
+*-shm
+*-wal
+
+# --- OS / editor noise ---
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# --- Pandoc / scratch output ---
+output.md
+/tmp/
