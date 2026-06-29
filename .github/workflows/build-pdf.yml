@@ -43,6 +43,7 @@ jobs:
             texlive-latex-extra \
             texlive-latex-recommended \
             texlive-fonts-recommended \
+            lmodern \
             fonts-liberation \
             fonts-dejavu-core
           sudo fc-cache -f
