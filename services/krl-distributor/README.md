@@ -157,6 +157,15 @@ uv run --extra dev pytest
 
 ### Docker
 
+CI builds and publishes this image to the GitHub Container Registry on every
+push to `main` (tag `latest`) and for each `v*` release tag:
+
+```bash
+docker pull ghcr.io/oriolrius/ssh-ca-cosmian-kms/krl-distributor:latest
+```
+
+Or build it locally:
+
 ```bash
 docker build -t krl-distributor .
 docker run --rm -p 8088:8088 \

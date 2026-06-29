@@ -21,8 +21,9 @@ WORKDIR /app
 
 # Install dependencies first (better layer caching), then the app.
 COPY pyproject.toml README.md ./
+RUN uv venv /app/.venv
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --python /app/.venv --system=false \
+    uv pip install --python /app/.venv \
         "fastapi>=0.110" "uvicorn[standard]>=0.29"
 
 COPY app.py ./
