@@ -152,7 +152,7 @@ uv run uvicorn app:app --host 0.0.0.0 --port 8088
 ### Tests (offline — no KMS required)
 
 ```bash
-uv run pytest
+uv run --extra dev pytest
 ```
 
 ### Docker

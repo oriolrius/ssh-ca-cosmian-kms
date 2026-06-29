@@ -42,8 +42,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Render Mermaid diagrams to PNG
         run: |
+          chmod 777 docs/diagrams   # let the image's user write the PNGs here
           for f in docs/diagrams/*.mmd; do
-            docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/data" \
+            docker run --rm -v "$PWD:/data" \
               minlag/mermaid-cli -i "/data/$f" -o "/data/${f%.mmd}.png" \
               -p /data/docs/diagrams/puppeteer-config.json
           done

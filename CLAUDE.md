@@ -21,7 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 gitleaks dir . && gitleaks git .              # secrets (or: pre-commit run -a)
 npx -y markdownlint-cli2                       # docs style
 cd poc && SSH_PORT=22022 bats test/uc.bats     # PoC UC1-UC9
-cd services/krl-distributor && uv run pytest -q # KRL service
+cd services/krl-distributor && uv run --extra dev pytest -q  # KRL service
 cd ansible && ansible-lint --profile production # Ansible role
 docs/pdf/build.sh                               # rebuild the PDF
 ```
