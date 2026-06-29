@@ -1,0 +1,11 @@
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.0.0"
+tag_format = "v$version"
+version_scheme = "semver"
+major_version_zero = true
+update_changelog_on_bump = true
+changelog_merge_prerelease = true
+version_files = [
+    "services/krl-distributor/pyproject.toml:version",
+]
