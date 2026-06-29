@@ -1,0 +1,9 @@
+# ~/.cosmian/cosmian.toml — Cosmian KMS client configuration (TLS / mTLS).
+# The CA private key lives in the KMS and is used via the PKCS#11 provider
+# (/usr/local/lib/libcosmian_pkcs11.so); it never exists as a file on disk.
+[kms_config.http_config]
+server_url = "https://kms.example.com:9998"
+
+# Mutual TLS: client certificate as a PKCS#12 bundle.
+ssl_client_pkcs12_path = "./certificates/controller.p12"
+ssl_client_pkcs12_password = "p12_password"   # placeholder — store securely (not in git)

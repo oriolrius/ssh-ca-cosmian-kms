@@ -1,0 +1,10 @@
+---
+# Ansible Galaxy requirements for the SSH host-certificate automation.
+# Install with:
+#   ansible-galaxy collection install -r requirements.yml
+collections:
+  # Provides community.crypto.openssh_keypair (generate the host key on the
+  # node) and community.crypto.openssh_cert (sign it on the controller with
+  # the Host CA via ssh-agent / use_agent: true).
+  - name: community.crypto
+    version: ">=2.10.0"

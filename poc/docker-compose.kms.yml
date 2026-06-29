@@ -1,0 +1,38 @@
+# Optional overlay: the production-style KMS path.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.kms.yml up -d
+#   make kms-up
+#
+# Adds Cosmian KMS (the CA private key lives here and is used via the PKCS#11
+# provider, never as a file) and the reference KRL distribution service.
+# The CA-signing-via-PKCS#11 step additionally requires libcosmian_pkcs11.so
+# on the operator host (see README / docs/technical-reference.md section 10.5).
+services:
+  cosmian-kms:
+    image: ${KMS_IMAGE:-ghcr.io/cosmian/kms:latest}
+    container_name: cosmian-kms
+    command: ["--database-type", "sqlite", "--port", "9998"]
+    ports:
+      - "127.0.0.1:${KMS_PORT:-9998}:9998"
+    networks:
+      ssh-ca-lab:
+        ipv4_address: 10.222.9.10
+
+  krl-distributor:
+    build: ../services/krl-distributor
+    image: ssh-ca-poc/krl-distributor
+    container_name: krl-distributor
+    environment:
+      KMS_SERVER_URL: "http://cosmian-kms:9998"
+    ports:
+      - "127.0.0.1:${KRL_PORT:-8088}:8088"
+    depends_on:
+      - cosmian-kms
+    networks:
+      ssh-ca-lab:
+        ipv4_address: 10.222.9.40
+
+networks:
+  ssh-ca-lab:
+    name: ssh-ca-lab
+    external: true

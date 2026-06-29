@@ -1,0 +1,17 @@
+# gitleaks configuration for ssh-ca-cosmian-kms.
+# Extends the default ruleset and allowlists known non-secrets that appear in
+# the documentation (SSH public-key fingerprints and disposable lab values).
+title = "ssh-ca-cosmian-kms"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "SSH key fingerprints and disposable lab placeholders are not secrets"
+regexTarget = "line"
+regexes = [
+  # SSH public-key fingerprints (a SHA-256 hash of a PUBLIC key) — never secret.
+  '''SHA256:[A-Za-z0-9+/]{43}''',
+  # Documented placeholder password for the example PKCS#12 bundle.
+  '''ssl_client_pkcs12_password\s*=\s*"p12_password"''',
+]

@@ -1,0 +1,27 @@
+%% Figure 3 - User certificate authentication flow with AuthorizedPrincipalsFile
+%% Source of truth: docs/technical-reference.md, Section 5
+%% Render: mmdc -i 03-user-cert-flow.mmd -o 03-user-cert-flow.png
+sequenceDiagram
+    autonumber
+
+    participant U as User<br/>(ssh-client)
+    participant CA as User CA<br/>(Cosmian KMS, tag ssh-user-ca)
+    participant S as SSH Server<br/>(sshd 10.222.9.20)
+
+    note over U,CA: One-time signing
+    U ->> CA: Submit user public key<br/>(jane.pub)
+    CA -->> U: User certificate<br/>(-I "Jane Jolie" -n admin,dev-team)
+    note over U: ssh-add loads key + cert into agent
+
+    U ->> S: Authenticate as root<br/>presents user certificate
+
+    note over S: Step 1 verify CA signature<br/>Step 2 CA in TrustedUserCAKeys<br/>Step 3 validity window<br/>Step 5 critical options<br/>Step 6 KRL check
+
+    note over S: Step 4 - principal mapping (RBAC)<br/>read AuthorizedPrincipalsFile<br/>/etc/ssh/auth_principals/root
+
+    alt Cert principal listed for target account
+        note over S: "admin" in auth_principals/root
+        S -->> U: ACCESS GRANTED as root<br/>(log: ID "Jane Jolie" serial N)
+    else No matching principal
+        S -->> U: REJECT<br/>name is not a listed principal
+    end

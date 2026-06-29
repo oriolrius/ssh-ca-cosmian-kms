@@ -1,0 +1,30 @@
+# Example inventory for the SSH host-certificate automation.
+# Copy to inventory.ini and adjust to your fleet:
+#     cp inventory.ini.example inventory.ini
+#
+# The lab node is the PoC ssh-server (10.222.9.20 on network ssh-ca-lab).
+# Generic deployments use names under your own domain (e.g. *.example.com).
+
+[sshservers]
+server.lab.local ansible_host=10.222.9.20
+
+# --- Connection variables (uncomment / adapt as needed) ---------------------
+# ansible_user is the login account the controller uses to reach the node.
+# It must be able to `become: true` (sudo) to write /etc/ssh and restart sshd.
+# server.lab.local ansible_user=ubuntu
+#
+# Path to the SSH private key the controller authenticates WITH (this is the
+# operator's own key, NOT the CA key — the CA key lives in Cosmian KMS and is
+# only used on the controller for signing, see the role README).
+# server.lab.local ansible_ssh_private_key_file=~/.ssh/id_ed25519
+#
+# Non-standard SSH port:
+# server.lab.local ansible_port=22
+
+# --- Group-wide defaults ----------------------------------------------------
+[sshservers:vars]
+# Become to root on the node to manage /etc/ssh and the sshd service.
+ansible_become=true
+ansible_become_method=sudo
+# Python 3.11+ interpreter on Ubuntu 24.04 nodes.
+# ansible_python_interpreter=/usr/bin/python3

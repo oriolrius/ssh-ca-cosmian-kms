@@ -1,0 +1,27 @@
+---
+galaxy_info:
+  role_name: ssh_host_cert
+  namespace: oriolrius
+  author: Oriol Rius
+  description: >-
+    Deploy SSH host keys and Host-CA-signed certificates using the Jan-Piet
+    Mens pattern, productionised for a dual-CA + Cosmian KMS setup. The Ed25519
+    host key is generated on the node (private key never leaves it) and signed
+    on the controller with the Host CA held in ssh-agent (loaded from Cosmian
+    KMS via libcosmian_pkcs11.so), so the CA key never exists as a file on disk.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  galaxy_tags:
+    - ssh
+    - certificate
+    - ca
+    - security
+    - pkcs11
+    - kms
+
+dependencies: []

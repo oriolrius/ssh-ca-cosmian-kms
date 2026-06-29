@@ -1,0 +1,4 @@
+# Principals permitted to log in as root.
+admin
+root-everywhere
+root

@@ -8,22 +8,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **`docs/poc-validation.md`** — Docker-based PoC validating all 9 use cases (UC1–UC9): CA key lifecycle in KMS, host/user cert signing, TOFU elimination, RBAC via principals, PTY denial, force-command, expiry, and KRL revocation.
 - **`docs/krl-distribution.md`** — Design for a stateless, encrypted REST service that distributes per-host KRLs (ECIES encryption + ECDSA signing, all crypto delegated to KMS).
 - **`docs/pdf/`** — PDF build pipeline: pandoc + xelatex `template.tex`, `preamble.tex`, two Lua filters (`table-widths.lua`, `center-figures.lua`), and `build.sh`.
-- **`.github/workflows/build-pdf.yml`** — CI that builds the PDF and publishes it to the `latest` GitHub release.
-- **`PLAN.md`** — Prioritized roadmap of suggested improvements.
+- **`.github/workflows/`** — CI: `build-pdf` (PDF → `latest` release), `ci` (shellcheck, yamllint, KRL pytest, ansible-lint, PoC bats), `docs` (markdownlint, lychee links, mermaid render), `security` (gitleaks).
+- **`poc/`** — One-command Docker PoC: `cd poc && make up && make test` runs UC1–UC9 (`scripts/poc.sh` engine, `test/uc.bats`, `scripts/kms-sign.sh` for the KMS/PKCS#11 path). Generated keys live in the git-ignored `poc/run/`.
+- **`services/krl-distributor/`** — FastAPI reference implementation of `docs/krl-distribution.md` (KMS-backed; `uv run pytest` for the mocked tests).
+- **`ansible/`** — `ssh_host_cert` role automating host-cert issuance (dual-CA + KMS); passes `ansible-lint --profile production`.
+- **`examples/`** — Sanitized `sshd_config.d`, `auth_principals`, `ssh_config.d`, `known_hosts`, `cosmian.toml`.
+- **`PLAN.md`** — Roadmap; P0/P1/P2 are complete, P3 are optional.
+
+## Local checks (mirror CI)
+
+```bash
+gitleaks dir . && gitleaks git .              # secrets (or: pre-commit run -a)
+npx -y markdownlint-cli2                       # docs style
+cd poc && SSH_PORT=22022 bats test/uc.bats     # PoC UC1-UC9
+cd services/krl-distributor && uv run pytest -q # KRL service
+cd ansible && ansible-lint --profile production # Ansible role
+docs/pdf/build.sh                               # rebuild the PDF
+```
 
 ## Working with the technical reference
 
 `docs/technical-reference.md` is the single source of truth — edit the Markdown directly. **Do not reintroduce a `.docx`**; the reference is Markdown-first now.
 
 Rebuild the PDF after edits (CI does this automatically on push to `main`):
+
 ```bash
 docs/pdf/build.sh            # -> docs/technical-reference.pdf
 ```
+
 All PDF styling (Letter paper, Liberation Sans body, navy/blue headings, grey monospace code boxes, inline never-split diagrams) lives in `docs/pdf/`. The generated `*.pdf` is git-ignored — CI publishes it to Releases. The build pins pandoc 2.9.2.1 to match `template.tex`.
 
 ## Document Structure
 
 The technical reference covers these sections:
+
 1. Why SSH keys don't scale (O(N×M) problem)
 2. OpenSSH certificate format internals (wire format fields)
 3. sshd certificate verification (6-step chain)
@@ -55,6 +73,7 @@ Three containers on network `ssh-ca-lab` (lab subnet `10.222.9.0/24`):
 | `ssh-client` | `10.222.9.30` | Ubuntu 24.04 + ssh + cosmian CLI |
 
 Check environment status:
+
 ```bash
 docker ps --filter name=cosmian-kms --filter name=ssh-server --filter name=ssh-client
 ```

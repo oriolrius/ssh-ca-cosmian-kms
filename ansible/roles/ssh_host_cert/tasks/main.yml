@@ -1,0 +1,97 @@
+---
+# Role ssh_host_cert — productionised Jan-Piet Mens host-cert workflow for the
+# dual-CA + Cosmian KMS setup. See docs/technical-reference.md section 10.
+
+# ── PHASE 1: Generate the Ed25519 host key ON THE NODE ──────────────────────
+# The private key is created on the target and never leaves it (not even to the
+# controller). opensshbin backend uses the node's own ssh-keygen.
+- name: Generate Ed25519 SSH host key on the node
+  community.crypto.openssh_keypair:
+    backend: "{{ ssh_host_cert_keypair_backend }}"
+    path: "{{ ssh_host_cert_key_path }}"
+    type: ed25519
+    comment: "ansible-managed host key for {{ inventory_hostname }}"
+  become: true
+  register: ssh_host_cert_keydata
+
+- name: Show generated host key metadata
+  ansible.builtin.debug:
+    var: ssh_host_cert_keydata
+    verbosity: 1
+
+# ── PHASE 2-4: Sign on the controller, push the cert back ───────────────────
+# block/always guarantees the controller tempdir is removed even on failure,
+# so no public-key artifacts are left scattered in /tmp.
+- name: Sign host key on controller and install the certificate
+  block:
+
+    # Isolated, uniquely-named tempdir on the controller.
+    - name: Create a local temporary directory on the controller
+      ansible.builtin.tempfile:
+        prefix: sshcert
+        suffix: ca
+        state: directory
+      register: ssh_host_cert_tmp
+      delegate_to: localhost
+      become: false
+
+    # Copy ONLY the public key to the controller (from returned metadata).
+    - name: Save the public host key to the controller temp dir
+      ansible.builtin.copy:
+        content: "{{ ssh_host_cert_keydata.public_key }}\n"
+        dest: "{{ ssh_host_cert_tmp.path }}/{{ ssh_host_cert_keydata.filename | basename }}.pub"
+        mode: "0644"
+      delegate_to: localhost
+      become: false
+
+    # Sign with the Host CA via ssh-agent (use_agent: true). The CA private key
+    # is supplied by the agent — loaded from Cosmian KMS with
+    # `ssh-add -s libcosmian_pkcs11.so` — and never exists on disk.
+    - name: Sign the host certificate on the controller (Host CA via ssh-agent)
+      community.crypto.openssh_cert:
+        type: "{{ ssh_host_cert_type }}"
+        identifier: "{{ ssh_host_cert_identifier }}"
+        public_key: "{{ ssh_host_cert_tmp.path }}/{{ ssh_host_cert_keydata.filename | basename }}.pub"
+        path: "{{ ssh_host_cert_tmp.path }}/{{ ssh_host_cert_keydata.filename | basename }}-cert.pub"
+        signing_key: "{{ ssh_host_cert_ca_signing_key }}"
+        use_agent: "{{ ssh_host_cert_use_agent }}"
+        principals: "{{ ssh_host_cert_principals }}"
+        serial_number: "{{ ssh_host_cert_serial }}"
+        valid_from: "{{ ssh_host_cert_valid_from }}"
+        valid_to: "{{ ssh_host_cert_valid_to }}"
+      delegate_to: localhost
+      become: false
+
+    # Push the signed certificate back to the node (world-readable, 0444).
+    - name: Install the signed host certificate on the node
+      ansible.builtin.copy:
+        src: "{{ ssh_host_cert_tmp.path }}/{{ ssh_host_cert_keydata.filename | basename }}-cert.pub"
+        dest: "{{ ssh_host_cert_cert_path }}"
+        owner: root
+        group: root
+        mode: "0444"
+      become: true
+      notify: Restart sshd
+
+  # ── CLEANUP: always runs, even if signing failed ──
+  always:
+    - name: Remove the controller temporary directory
+      ansible.builtin.file:
+        path: "{{ ssh_host_cert_tmp.path }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+      when: ssh_host_cert_tmp.path is defined
+
+# ── Configure sshd: present the host cert + trust the User CA ────────────────
+- name: Configure sshd for SSH certificates
+  ansible.builtin.blockinfile:
+    path: "{{ ssh_host_cert_sshd_config }}"
+    marker: "# {mark} ANSIBLE SSH CERTIFICATES (ssh_host_cert role)"
+    block: |
+      HostKey {{ ssh_host_cert_key_path }}
+      HostCertificate {{ ssh_host_cert_cert_path }}
+      TrustedUserCAKeys {{ ssh_host_cert_user_ca_pub }}
+    validate: "/usr/sbin/sshd -t -f %s"
+  become: true
+  notify: Restart sshd

@@ -1,0 +1,32 @@
+[Unit]
+Description=Pull and install the latest SSH KRL (encrypted, KMS-backed)
+Documentation=https://github.com/oriolrius/ssh-ca-cosmian-kms
+# Only meaningful once the network is up; the KRL service is remote.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Host-specific configuration (KRL_API_URL, HOST_ID, HOST_PRIV_KEY_ID,
+# CA_PUBLIC_KEY_ID, cosmian.toml location, ...) lives here. "-" => optional.
+EnvironmentFile=-/etc/krl-puller.env
+ExecStart=/usr/local/sbin/host_puller.sh
+
+# The puller must write /etc/ssh/revoked_keys (mode 444, root-owned), so it
+# runs as root but is otherwise sandboxed.
+User=root
+Group=root
+
+# Hardening: the only directory it needs to write is /etc/ssh.
+ProtectSystem=strict
+ReadWritePaths=/etc/ssh
+PrivateTmp=true
+ProtectHome=true
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+# Don't let a transient KMS/network blip cascade; the timer retries soon.
+TimeoutStartSec=60

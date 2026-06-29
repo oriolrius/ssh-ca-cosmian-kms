@@ -1,0 +1,28 @@
+# Core PoC environment: an sshd server on a published local port.
+# The CA operator and SSH client roles are driven from the host by
+# scripts/poc.sh (it uses the host's ssh-keygen / ssh).
+#
+#   make up          # build + start ssh-server
+#   make test        # run UC1-UC9
+#   make down        # stop and remove
+#
+# The optional KMS path (Cosmian KMS + KRL distributor) lives in
+# docker-compose.kms.yml.
+services:
+  ssh-server:
+    build: ./ssh-server
+    image: ssh-ca-poc/ssh-server
+    container_name: ssh-server
+    hostname: server.lab.local
+    ports:
+      - "127.0.0.1:${SSH_PORT:-2222}:22"
+    networks:
+      ssh-ca-lab:
+        ipv4_address: 10.222.9.20
+
+networks:
+  ssh-ca-lab:
+    name: ssh-ca-lab
+    ipam:
+      config:
+        - subnet: ${LAB_SUBNET:-10.222.9.0/24}

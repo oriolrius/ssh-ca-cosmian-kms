@@ -1,0 +1,32 @@
+%% Figure 1 - sshd certificate verification decision chain (6 steps)
+%% Source of truth: docs/technical-reference.md, Section 3
+%% Render: mmdc -i 01-verification-decision-chain.mmd -o 01-verification-decision-chain.png
+flowchart TD
+    START([sshd receives user certificate]) --> S1
+
+    S1{"Step 1: Signature valid?<br/>(verify with CA key in cert)"}
+    S1 -- No --> R1["REJECT<br/>cert tampered / wrong CA"]:::reject
+    S1 -- Yes --> S2
+
+    S2{"Step 2: CA key in<br/>TrustedUserCAKeys?"}
+    S2 -- No --> R2["REJECT<br/>untrusted CA"]:::reject
+    S2 -- Yes --> S3
+
+    S3{"Step 3: now within<br/>[valid_after, valid_before]?"}
+    S3 -- No --> R3["REJECT<br/>expired / not yet valid<br/>(check NTP)"]:::reject
+    S3 -- Yes --> S4
+
+    S4{"Step 4: principal matches?<br/>(cert list or<br/>AuthorizedPrincipalsFile)"}
+    S4 -- No --> R4["REJECT<br/>name is not a listed principal"]:::reject
+    S4 -- Yes --> S5
+
+    S5{"Step 5: critical options<br/>understood & satisfied?"}
+    S5 -- No --> R5["REJECT<br/>unknown / failed critical option"]:::reject
+    S5 -- Yes --> S6
+
+    S6{"Step 6: not revoked?<br/>(RevokedKeys / KRL)"}
+    S6 -- No --> R6["REJECT<br/>revoked by file"]:::reject
+    S6 -- Yes --> OK(["ACCESS GRANTED"]):::accept
+
+    classDef reject fill:#fde2e1,stroke:#c0392b,color:#7b241c;
+    classDef accept fill:#d5f5e3,stroke:#1e8449,color:#145a32;

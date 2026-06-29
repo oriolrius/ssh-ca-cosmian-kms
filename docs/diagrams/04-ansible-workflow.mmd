@@ -1,0 +1,28 @@
+%% Figure 4 - Jan-Piet Mens' Ansible host certificate deployment workflow
+%% Source of truth: docs/technical-reference.md, Section 10
+%% Render: mmdc -i 04-ansible-workflow.mmd -o 04-ansible-workflow.png
+sequenceDiagram
+    autonumber
+
+    participant C as Ansible Controller
+    participant AG as SSH Agent<br/>(CA passphrase / KMS)
+    participant N as Target Node<br/>(d13)
+
+    note over C,N: Phase 1 - Generate key ON THE NODE
+    C ->> N: openssh_keypair (backend opensshbin)
+    note over N: Ed25519 private key created locally<br/>private key NEVER leaves the node
+    N -->> C: keydata (public_key + filename only)
+
+    note over C: block / always wrapper -<br/>tempdir on controller (/tmp/jpXXXcert)
+
+    note over C,AG: Phase 2 - Sign on controller via agent
+    C ->> AG: openssh_cert use_agent: true<br/>principals = [fqdn] + all IPv4
+    note over AG: CA private key in agent / KMS,<br/>never written to disk
+    AG -->> C: Signed host certificate<br/>(*-cert.pub, type host)
+
+    note over C,N: Phase 3 - Deploy certificate back to node
+    C ->> N: copy *-cert.pub to /etc/ssh (mode 0444)
+    note over N: notify handler -> sshd -t && restart
+
+    note over C: Phase 4 - Cleanup (always block)
+    C ->> C: Remove tempdir even on failure

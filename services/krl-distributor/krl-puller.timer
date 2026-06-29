@@ -1,0 +1,16 @@
+[Unit]
+Description=Periodically refresh the SSH KRL (every 15 minutes)
+Documentation=https://github.com/oriolrius/ssh-ca-cosmian-kms
+
+[Timer]
+# Run shortly after boot, then every 15 minutes thereafter.
+OnBootSec=2min
+OnUnitActiveSec=15min
+# Spread load across a fleet so all hosts don't hit the service at once.
+RandomizedDelaySec=2min
+# Catch up after the machine was suspended/offline.
+Persistent=true
+Unit=krl-puller.service
+
+[Install]
+WantedBy=timers.target

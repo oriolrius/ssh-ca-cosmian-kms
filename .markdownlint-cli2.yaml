@@ -1,0 +1,17 @@
+# markdownlint-cli2 configuration. Lints the authored project docs; the large,
+# pandoc-derived reference docs under docs/ are prose and are excluded.
+config:
+  default: true
+  MD013: false   # line length — not enforced for prose
+  MD033: false   # inline HTML — README badges
+  MD041: false   # first-line H1 — files may start with frontmatter or badges
+  MD060: false   # table pipe spacing — cosmetic, not enforced
+  MD024:
+    siblings_only: true   # allow same heading text under different parents
+globs:
+  - "**/*.md"
+ignores:
+  - node_modules
+  - "docs/technical-reference.md"
+  - "docs/poc-validation.md"
+  - "docs/krl-distribution.md"

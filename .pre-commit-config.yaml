@@ -1,0 +1,20 @@
+# Pre-commit hooks for ssh-ca-cosmian-kms.
+#   pip install pre-commit  (or: uv tool install pre-commit)
+#   pre-commit install            # enable on every commit
+#   pre-commit run --all-files    # run manually
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=2048']

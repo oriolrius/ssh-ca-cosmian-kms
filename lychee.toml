@@ -1,0 +1,12 @@
+# lychee link-checker configuration.
+max_retries = 2
+accept = [200, 206, 429]
+
+# Disposable lab / documentation placeholders that are not meant to resolve.
+exclude = [
+  "example\\.com",
+  "lab\\.local",
+  "kms\\.example\\.com",
+  "127\\.0\\.0\\.1",
+  "localhost",
+]

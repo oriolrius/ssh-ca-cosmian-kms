@@ -1,0 +1,7 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/oriolrius/ssh-ca-cosmian-kms/security/advisories/new
+    about: >-
+      Do not open a public issue for a security problem. Report it privately
+      via the Security tab (Report a vulnerability). See SECURITY.md.

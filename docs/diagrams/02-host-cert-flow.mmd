@@ -1,0 +1,27 @@
+%% Figure 2 - Host certificate authentication flow (TOFU eliminated)
+%% Source of truth: docs/technical-reference.md, Section 4
+%% Render: mmdc -i 02-host-cert-flow.mmd -o 02-host-cert-flow.png
+sequenceDiagram
+    autonumber
+
+    participant C as SSH Client<br/>(ssh-client 10.222.9.30)
+    participant S as SSH Server<br/>(server.lab.local 10.222.9.20)
+    participant CA as Host CA<br/>(offline / Cosmian KMS)
+
+    note over CA,S: One-time provisioning<br/>(before any client connects)
+    CA ->> S: Sign host key with Host CA<br/>(ssh-keygen -h -n server.lab.local,IP)
+    note over S: Install ssh_host_ed25519_key-cert.pub<br/>HostCertificate in sshd_config
+
+    note over C: Trust the Host CA ONCE<br/>@cert-authority *.lab.local ecdsa... in known_hosts
+
+    C ->> S: TCP connect + SSH version exchange
+    S -->> C: Host key + host certificate<br/>(ssh-ed25519-cert-v01)
+
+    note over C: 1. Extract CA key from cert<br/>2. Match @cert-authority pattern<br/>3. Verify CA signature<br/>4. Check hostname in principals<br/>5. Check validity window
+
+    alt Certificate trusted
+        C -->> C: No TOFU prompt -<br/>server identity proven
+        C ->> S: Proceed to user authentication
+    else Bad / untrusted cert
+        C -->> C: Reject connection<br/>(no silent accept)
+    end

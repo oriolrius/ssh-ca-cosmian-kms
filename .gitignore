@@ -9,6 +9,23 @@ poc-data/
 # --- Generated PDF (built by CI from docs/technical-reference.md) ---
 *.pdf
 
+# --- PoC runtime + local env ---
+poc/run/
+poc/.env
+ansible/inventory.ini
+
+# --- Rendered diagrams (sources are the .mmd files) ---
+docs/diagrams/*.png
+docs/diagrams/*.svg
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
 # --- Internal tooling metadata ---
 .engram/
 

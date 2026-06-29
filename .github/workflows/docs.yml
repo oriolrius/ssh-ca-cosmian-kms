@@ -1,0 +1,54 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths: ['**/*.md', 'docs/**', '.markdownlint-cli2.yaml', 'lychee.toml', '.github/workflows/docs.yml']
+  pull_request:
+    paths: ['**/*.md', 'docs/**', '.markdownlint-cli2.yaml', 'lychee.toml', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npx -y markdownlint-cli2
+
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: lychee link check
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --config lychee.toml --no-progress
+            --exclude-path docs/technical-reference.md
+            --exclude-path docs/poc-validation.md
+            --exclude-path docs/krl-distribution.md
+            './**/*.md'
+          fail: true
+
+  diagrams:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render Mermaid diagrams to PNG
+        run: |
+          for f in docs/diagrams/*.mmd; do
+            docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/data" \
+              minlag/mermaid-cli -i "/data/$f" -o "/data/${f%.mmd}.png" \
+              -p /data/docs/diagrams/puppeteer-config.json
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diagrams
+          path: docs/diagrams/*.png
+          if-no-files-found: error

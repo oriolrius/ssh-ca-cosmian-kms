@@ -1,0 +1,69 @@
+---
+# Defaults for role ssh_host_cert.
+# Override per-host or per-group in inventory / group_vars as needed.
+
+# --- Layout on the node ------------------------------------------------------
+# Directory holding host key, certificate and sshd_config.
+ssh_host_cert_dirname: /etc/ssh
+
+# Ed25519 host key path on the node (private key is generated here and never
+# leaves the node). The signed certificate lands at "<this>-cert.pub".
+ssh_host_cert_key_path: "{{ ssh_host_cert_dirname }}/ssh_host_ed25519_key"
+
+# Backend for community.crypto.openssh_keypair: use the node's own ssh-keygen.
+ssh_host_cert_keypair_backend: opensshbin
+
+# --- Host CA signing key (lives in Cosmian KMS, used via ssh-agent) ----------
+# When use_agent is true, signing_key is the *public* key of the Host CA; the
+# matching private key is supplied by ssh-agent (loaded with
+# `ssh-add -s libcosmian_pkcs11.so`). The private key never touches disk.
+ssh_host_cert_use_agent: true
+
+# Tag of the Host CA object inside Cosmian KMS (informational / for tooling
+# that resolves the key by tag; the actual signer is whatever ssh-agent holds).
+ssh_host_cert_ca_kms_tag: ssh-host-ca
+
+# Path on the controller to the Host CA PUBLIC key (the signing_key fed to
+# openssh_cert when use_agent is true). Export it once from the KMS, e.g.:
+#   cosmian kms ec keys export --tag ssh-host-ca ... ssh-host-ca
+#   ssh-keygen -i -m PKCS8 ...  # -> ssh-host-ca.pub
+ssh_host_cert_ca_signing_key: "{{ playbook_dir }}/files/ssh-host-ca.pub"
+
+# PKCS#11 provider library used to load the Host CA from Cosmian KMS into
+# ssh-agent on the controller (documented for operators; loading is done out
+# of band with `ssh-add -s <this>` before running the playbook).
+ssh_host_cert_pkcs11_provider: /usr/local/lib/libcosmian_pkcs11.so
+
+# --- Certificate parameters --------------------------------------------------
+# Certificate type — this role signs HOST certificates.
+ssh_host_cert_type: host
+
+# Human-readable identifier logged by sshd on every connection (audit trail).
+ssh_host_cert_identifier: "{{ inventory_hostname }}"
+
+# Monotonic serial number (override per host for meaningful audit/KRL ranges).
+ssh_host_cert_serial: 10
+
+# Validity window. valid_to "+53w" matches the documented ~1-year host cert
+# (one week longer than the typical user cert, per the reference).
+ssh_host_cert_valid_from: "+0s"
+ssh_host_cert_valid_to: "+53w"
+
+# Principals: FQDN + every IPv4 address on the node, so clients match whether
+# they connect by name or by IP (see technical-reference.md 10.3.4).
+ssh_host_cert_principals: "{{ [ansible_fqdn] + ansible_all_ipv4_addresses }}"
+
+# --- sshd configuration ------------------------------------------------------
+# User CA PUBLIC key trusted to sign USER certificates (TrustedUserCAKeys).
+# Deploy the User CA public key to this path on the node out of band, or point
+# this at wherever you stage it.
+ssh_host_cert_user_ca_pub: "{{ ssh_host_cert_dirname }}/ssh-user-ca.pub"
+
+# Path to the Host certificate as it lives on the node (HostCertificate).
+ssh_host_cert_cert_path: "{{ ssh_host_cert_key_path }}-cert.pub"
+
+# sshd_config to manage.
+ssh_host_cert_sshd_config: "{{ ssh_host_cert_dirname }}/sshd_config"
+
+# Name of the sshd service unit (Ubuntu 24.04 uses "ssh").
+ssh_host_cert_sshd_service: ssh

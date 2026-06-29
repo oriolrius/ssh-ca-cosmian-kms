@@ -3,6 +3,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-technical%20reference-blue.svg)](docs/technical-reference.md)
 [![Build PDF](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/build-pdf.yml/badge.svg)](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/build-pdf.yml)
+[![CI](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/ci.yml/badge.svg)](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/ci.yml)
+[![Docs](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/docs.yml/badge.svg)](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/docs.yml)
+[![Security](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/security.yml/badge.svg)](https://github.com/oriolrius/ssh-ca-cosmian-kms/actions/workflows/security.yml)
 [![Download PDF](https://img.shields.io/badge/download-PDF-red.svg)](https://github.com/oriolrius/ssh-ca-cosmian-kms/releases/download/latest/ssh-ca-technical-reference.pdf)
 
 A practitioner-grade reference for replacing per-host SSH keys with **OpenSSH
@@ -34,19 +37,22 @@ restrictions, and a human-attributable audit trail.
 
 ## Repository structure
 
-```
+```text
 .
-├── README.md                          This file
-├── LICENSE                            MIT
-├── PLAN.md                            Suggested improvements / roadmap
-├── CLAUDE.md                          Guidance for working in this repo with Claude Code
-├── .github/workflows/build-pdf.yml    CI: builds the PDF and publishes it to Releases
-└── docs/
-    ├── technical-reference.md         Canonical source for the technical reference
-    ├── media/                         Figures used by the reference (and the PDF)
-    ├── poc-validation.md              Docker PoC validating use cases UC1–UC9
-    ├── krl-distribution.md            Design for an encrypted, stateless KRL distribution API
-    └── pdf/                           PDF build pipeline (pandoc + xelatex template, filters, build.sh)
+├── README.md / LICENSE / PLAN.md / CLAUDE.md
+├── CONTRIBUTING.md / SECURITY.md / CHANGELOG.md
+├── .github/workflows/      build-pdf · ci · docs · security
+├── docs/
+│   ├── technical-reference.md   Canonical source for the technical reference
+│   ├── media/                   Figures used by the reference (and the PDF)
+│   ├── diagrams/                Editable Mermaid sources for the figures
+│   ├── poc-validation.md        Narrated UC1–UC9 walkthrough
+│   ├── krl-distribution.md      Encrypted, stateless KRL distribution design
+│   └── pdf/                     PDF build pipeline (pandoc + xelatex)
+├── poc/                    One-command Docker PoC (make up && make test)
+├── services/krl-distributor/   FastAPI KRL distribution service (KMS-backed)
+├── ansible/                Role automating host-cert issuance (dual-CA + KMS)
+└── examples/               Sanitized sshd_config, auth_principals, cosmian.toml…
 ```
 
 ## Documentation
@@ -63,17 +69,26 @@ restrictions, and a human-attributable audit trail.
   encrypted REST service that distributes per-host revocation lists using KMS for
   all crypto (ECIES encryption + ECDSA signing), holding no secrets itself.
 
-## Quick start (proof of concept)
+## Quick start
 
-The PoC runs three Docker containers on a dedicated bridge network — Cosmian KMS,
-an `sshd` server, and an SSH client that doubles as the CA operator — and walks
-through CA creation, host/user certificate signing, RBAC, restrictions, expiry,
-and revocation. Follow it step by step in **[docs/poc-validation.md](docs/poc-validation.md)**.
+**Run the whole PoC with one command** (needs Docker and the host's `ssh` /
+`ssh-keygen`):
 
-It deliberately avoids `docker-compose` so every step is an explicit, auditable
-`docker` / `ssh-keygen` command.
+```bash
+cd poc
+make up        # build + start the sshd server
+make test      # run UC1-UC9, each step self-asserting
+make clean     # tear down
+```
 
-### Installing the Cosmian CLI
+UC1–UC9 exercise the dual CA, host/user certificate signing, TOFU elimination,
+principal-based RBAC, PTY denial, force-command, expiry, and KRL revocation. The
+default file-based dual-CA path needs **no KMS**. For the production path — CA
+keys held in Cosmian KMS and used via PKCS#11 so they never touch disk — see
+[`poc/README.md`](poc/README.md) and `poc/scripts/kms-sign.sh`. A narrated,
+step-by-step version lives in [docs/poc-validation.md](docs/poc-validation.md).
+
+### Installing the Cosmian CLI (for the KMS path)
 
 Use the Ubuntu 22.04 release — the `.deb` and the Ubuntu 24.04 zip require
 `GLIBC_2.38` and won't run on 22.04.
@@ -88,6 +103,11 @@ sudo install -m 755 "$BASE/libcosmian_pkcs11.so" /usr/local/lib/
 
 cosmian --version   # cosmian_cli 1.9.0
 ```
+
+> [!NOTE]
+> The PKCS#11 provider (`libcosmian_pkcs11.so`) ships in that **zip, not the
+> `.deb`**. If `cosmian --version` works but KMS signing fails, the provider is
+> missing — install it from the zip as shown above.
 
 ## Key design decisions
 
@@ -105,14 +125,15 @@ cosmian --version   # cosmian_cli 1.9.0
 
 ## Security & privacy
 
-- **No secrets are committed.** Private keys, host keys, the KMS database, and
-  other runtime state live only under `poc-data/`, which is git-ignored. The
-  `.gitignore` also blocks common key/secret patterns as defense in depth.
+- **No secrets are committed.** Generated keys and certificates live only under
+  the git-ignored `poc/run/`. The `.gitignore` blocks key/secret patterns, and
+  **gitleaks** runs both as a pre-commit hook and in CI
+  ([`security.yml`](.github/workflows/security.yml)) over the full history.
 - All identifiers in the docs (CA fingerprints, `server.lab.local`, the
   `10.222.9.0/24` lab subnet, `192.0.2.x` example addresses) are **disposable lab
   values**, safe to publish.
-- To reproduce the environment, generate fresh keys by following
-  [docs/poc-validation.md](docs/poc-validation.md) — never reuse the demo material.
+- See [`SECURITY.md`](SECURITY.md) for the project's security posture and how to
+  report a vulnerability. Always generate fresh keys; never reuse demo material.
 
 ## Contributing
 

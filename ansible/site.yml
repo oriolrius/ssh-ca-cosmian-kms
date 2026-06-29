@@ -1,0 +1,25 @@
+---
+# site.yml — deploy SSH host keys + Host-CA-signed certificates to the fleet.
+#
+# Productionised Jan-Piet Mens pattern for the dual-CA + Cosmian KMS setup:
+#   * the Ed25519 host key is generated ON the node (private key never leaves it),
+#   * only the public key is copied to the controller and signed there with the
+#     Host CA held in ssh-agent (loaded via `ssh-add -s libcosmian_pkcs11.so`),
+#   * the signed certificate is pushed back and sshd is configured + reloaded.
+#
+# See docs/technical-reference.md section 10 ("Automation") for the rationale.
+#
+# Prerequisites (run on the controller before this playbook — see README.md):
+#   ssh-add -s /usr/local/lib/libcosmian_pkcs11.so   # load Host CA from KMS
+#   ssh-add -l                                       # verify the CA key is present
+#
+# Usage:
+#   ansible-playbook -i inventory.ini site.yml
+
+- name: Deploy SSH host certificates (Host CA in Cosmian KMS via ssh-agent)
+  hosts: sshservers
+  # gather_facts is mandatory: the principals expression in the role needs
+  # ansible_fqdn and ansible_all_ipv4_addresses.
+  gather_facts: true
+  roles:
+    - role: ssh_host_cert

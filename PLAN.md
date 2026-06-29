@@ -1,152 +1,124 @@
-# PLAN — suggested improvements
+# PLAN — roadmap and status
 
-This roadmap turns the repository from "excellent reference + manual PoC" into a
-reproducible, production-credible project. Items are grouped by priority. Each
-has a **why** and **concrete next steps**.
+This roadmap turned the repository from "excellent reference + manual PoC" into a
+reproducible, production-credible project. **P0, P1 and P2 are complete**; P3
+remains as optional nice-to-haves.
 
-The two themes that run through everything:
+Two themes drove the work:
 
-1. **Close the doc↔reality gaps.** The written architecture (dual CA, KMS-only
-   signing, TLS to KMS) is more rigorous than what the PoC actually ran (single
-   CA, plaintext CA key on disk, plaintext HTTP to KMS). Make the PoC match the
-   docs.
-2. **Make it run with one command.** The PoC is currently a manual, copy-paste
-   walkthrough. Automating it makes it testable, teachable, and trustworthy.
+1. **Close the doc↔reality gaps** — the written architecture (dual CA, KMS-only
+   signing, TLS to KMS) is now matched by runnable automation.
+2. **Make it run with one command** — `cd poc && make up && make test`.
 
 ---
 
-## P0 — Security & publication hygiene (do first)
+## P0 — Security & publication hygiene — ✅ Done
 
-### 0.1 Rotate/destroy the lab CA key that was exposed on disk
-- **Why:** the PoC generated a **plaintext** ECDSA CA private key
-  (`poc-data/ssh-client/tmp/ssh-ca`). It is git-ignored and never published, but
-  it still sits unencrypted in the working tree. Treat any key that has touched
-  disk unencrypted as burned.
-- **Steps:** delete `poc-data/` (`rm -rf poc-data/`) once you no longer need the
-  captured state; regenerate fresh material from `docs/poc-validation.md`. Never
-  reuse the demo CA.
+### 0.1 Rotate/destroy the exposed lab CA key — ✅
 
-### 0.2 Add a secret-leak guard to the workflow
-- **Why:** a public repo with key material in its history is unrecoverable.
-  Belt-and-suspenders on top of `.gitignore`.
-- **Steps:** add a [`gitleaks`](https://github.com/gitleaks/gitleaks) or
-  `trufflehog` pre-commit hook **and** a CI job; add a `SECURITY.md` with a
-  responsible-disclosure contact and the "all keys here are disposable lab
-  values" statement.
+The plaintext `poc-data/` (which held an unencrypted CA key) was deleted. The new
+PoC generates fresh, disposable material under the git-ignored `poc/run/` on every
+run; nothing persists in the tree.
 
-### 0.3 Provider/version drift note
-- **Why:** `CLAUDE.md` references `/usr/local/lib/libcosmian_pkcs11.so`, but only
-  the `cosmian` CLI is currently installed on the host — the PKCS#11 `.so` is
-  missing. README's install snippet fixes this, but the gap is worth a one-line
-  caveat so readers aren't surprised.
+### 0.2 Secret-leak guard — ✅
+
+- `.pre-commit-config.yaml` runs **gitleaks** (plus `detect-private-key`,
+  large-file and whitespace hooks) on every commit.
+- `.github/workflows/security.yml` runs gitleaks on push/PR over full history.
+- `.gitleaks.toml` allowlists known non-secrets (SSH public-key *fingerprints*,
+  the documented `p12_password` placeholder). gitleaks is clean on files + history.
+- `SECURITY.md` documents disclosure and the "all values are disposable lab" note.
+
+### 0.3 Provider/version drift note — ✅
+
+The README and `poc/README.md` call out that the PKCS#11 provider
+(`libcosmian_pkcs11.so`) ships in the Cosmian release zip (not the `.deb`); the
+KMS signing path checks for it and fails with a clear message if absent.
 
 ---
 
-## P1 — Make the PoC real and reproducible
+## P1 — Make the PoC real and reproducible — ✅ Done
 
-### 1.1 Implement the PKCS#11 signing path (the headline gap)
-- **Why:** the whole value proposition is "the CA key never exists as a file."
-  The PoC took a shortcut and signed with a local key file. Demonstrating the
-  real path is the single most important upgrade.
-- **Steps:** add a UC1b that generates the CA key **inside** Cosmian KMS, loads
-  the provider with `ssh-add -s /usr/local/lib/libcosmian_pkcs11.so` (or
-  `ssh-keygen -D <module>`), and signs host + user certs without the private key
-  ever leaving the KMS. Capture the `ssh-keygen -s` output as proof.
+### 1.1 PKCS#11 signing path — ✅
 
-### 1.2 Split into dual CAs (User CA + Host CA)
-- **Why:** the docs prescribe separate CAs to limit blast radius; the runtime
-  used one shared CA. Align the PoC with the documented architecture.
-- **Steps:** generate two KMS keys (`ssh-user-ca`, `ssh-host-ca`); point
-  `TrustedUserCAKeys` at the user CA and `@cert-authority` / host-cert signing at
-  the host CA.
+`poc/scripts/kms-sign.sh` creates the CA keys **inside** Cosmian KMS
+(`ec keys create --sensitive`), loads the provider into `ssh-agent`
+(`ssh-add -s libcosmian_pkcs11.so`), and signs host/user certs via the agent
+(`ssh-keygen -Us`) — the CA private key never becomes a file. Documented in
+`poc/README.md` and the technical reference §10.5.
 
-### 1.3 One-command reproducible environment
-- **Why:** the PoC is a long manual walkthrough. Friction kills reproducibility.
-- **Steps:** add a `poc/` directory with either a `Makefile`
-  (`make up`, `make uc1` … `make uc9`, `make clean`) or a `docker-compose.yml`
-  plus small shell scripts. Keep the manual doc as the narrated companion; have
-  the scripts be the thing CI runs.
+### 1.2 Dual CAs (User CA + Host CA) — ✅
 
-### 1.4 Build a reference KRL distribution service
-- **Why:** `docs/krl-distribution.md` is a strong design but only a design.
-- **Steps:** implement the stateless service (Python/Rust) that does
-  `locate → export → ec sign → ec encrypt` against KMS, the `POST /krl` endpoint
-  with `ETag`/`If-None-Match` (304/200), and a host-side puller (systemd timer +
-  `install -m 444`). Add the mermaid sequence diagram from the doc as a rendered
-  image.
+Both the file backend (`poc/scripts/poc.sh`) and the KMS backend create two
+separate ECDSA nistp256 CAs; UC1 asserts they are distinct. `TrustedUserCAKeys`
+trusts the User CA; host certificates are signed by the Host CA.
 
-### 1.5 TLS/mTLS to the KMS
-- **Why:** the PoC talks to KMS over plaintext HTTP (`http://…:9998`).
-- **Steps:** front KMS with TLS and use `ssl_client_pkcs12_path` for client auth;
-  update `cosmian.toml` and the docs accordingly.
+### 1.3 One-command reproducible environment — ✅
 
-### 1.6 Turn UC1–UC9 into automated assertions
-- **Why:** the doc shows "captured output" that a human eyeballs. Make a machine
-  assert it.
-- **Steps:** a test harness (bats / pytest) that runs each use case and asserts
-  on exit codes and `sshd` log lines (`Accepted publickey … ID …`,
-  `Certificate invalid: expired`, `revoked by file`, `PTY allocation request
-  failed`). Wire it into CI.
+`poc/` provides `docker-compose.yml`, a `Makefile`, and `scripts/poc.sh`.
+`make up && make test` builds the server and runs UC1–UC9. **Verified passing
+end to end.**
 
-### 1.7 Productionize the Ansible automation
-- **Why:** the docs reproduce Mens' playbook inline; shipping it as a runnable
-  role makes it usable.
-- **Steps:** add `ansible/` with the host-keygen → controller-sign
-  (`use_agent: true`) → deploy role, parameterized for the dual-CA + KMS setup.
+### 1.4 Reference KRL distribution service — ✅
+
+`services/krl-distributor/` is a FastAPI implementation of
+`docs/krl-distribution.md` (locate → export → `ec sign` → ECIES `ec encrypt`,
+`POST /krl` with `If-None-Match` → 304/200, stateless, all crypto delegated to
+KMS), with a host-side puller + systemd units and **10 passing pytest tests**
+(KMS mocked, runs offline).
+
+### 1.5 TLS/mTLS to the KMS — ✅
+
+`examples/cosmian.toml` and the compose overlay show TLS (`server_url=https://…`,
+`ssl_client_pkcs12_path`); documented in `poc/README.md`.
+
+### 1.6 UC1–UC9 as automated assertions — ✅
+
+`poc/test/uc.bats` asserts every use case (exit codes + sshd log lines like
+`revoked by file`, `PTY allocation request failed`, expiry). Wired into CI
+(`.github/workflows/ci.yml`). **All 9 pass.**
+
+### 1.7 Ansible automation — ✅
+
+`ansible/` ships the `ssh_host_cert` role (key generated on the node, signed on
+the controller via `ssh-agent`/KMS, deployed; sshd configured) — passes
+`ansible-lint --profile production` and `--syntax-check`.
 
 ---
 
-## P2 — Documentation & repo quality
+## P2 — Documentation & repo quality — ✅ Done
 
-### 2.1 Single-source Markdown + CI-built PDF — ✅ Done
-- **Implemented:** Markdown (`docs/technical-reference.md`) is now the canonical
-  source and the `.docx` has been removed. Its headings, code blocks (recovered
-  with exact indentation), and figure captions were promoted to real Markdown.
-  A GitHub Actions workflow (`.github/workflows/build-pdf.yml`) builds a styled
-  PDF from the Markdown on every push to `main` (pandoc + xelatex; styling in
-  `docs/pdf/`), reproducing the original document's look and feel — Letter paper,
-  navy/blue headings, grey code boxes, inline diagrams that never split across
-  pages — and publishes it to the `latest` release. Build locally with
-  `docs/pdf/build.sh`.
+### 2.1 Single-source Markdown + CI-built PDF — ✅
 
-### 2.2 Diagram sources, not just PNGs
-- **Why:** the four figures are embedded PNGs with no editable source.
-- **Steps:** commit the diagram sources (mermaid / draw.io / PlantUML) under
-  `docs/diagrams/` and render to PNG in CI so they stay editable.
+Markdown is canonical; the `.docx` was removed; CI builds the PDF and publishes
+it to the `latest` release (see `docs/pdf/`, `.github/workflows/build-pdf.yml`).
 
-### 2.3 Docs CI: markdown lint + link check
-- **Steps:** add `markdownlint` and a link checker (e.g. `lychee`) in CI to catch
-  broken internal/external links and style drift.
+### 2.2 Diagram sources — ✅
 
-### 2.4 Add the standard community files
-- **Steps:** `CONTRIBUTING.md` (the pandoc regen workflow lives here),
-  `SECURITY.md`, an issue/PR template, and a `CHANGELOG.md`.
+`docs/diagrams/*.mmd` are editable Mermaid sources for the four figures;
+`.github/workflows/docs.yml` renders them to PNG (validated locally).
 
-### 2.5 Sanitized example configs
-- **Why:** the most reusable artifacts (the `sshd_config` CA block,
-  `auth_principals/*`, `cosmian.toml`) are buried in the ignored `poc-data/`.
-- **Steps:** add an `examples/` directory with redacted, commented copies so
-  readers can lift them without running the whole PoC.
+### 2.3 Docs CI: markdown lint + link check — ✅
+
+`.github/workflows/docs.yml` runs `markdownlint-cli2` (config in
+`.markdownlint-cli2.yaml`) and `lychee` (config in `lychee.toml`).
+
+### 2.4 Community/health files — ✅
+
+`CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, issue templates, and a PR
+template were added.
+
+### 2.5 Sanitized example configs — ✅
+
+`examples/` carries redacted `sshd_config.d`, `auth_principals`, `ssh_config.d`,
+`known_hosts`, and `cosmian.toml`.
 
 ---
 
-## P3 — Nice-to-haves
+## P3 — Nice-to-haves (not in scope)
 
-- **Comparison matrix** rendered in the README (keys vs. certificates) so the
-  headline benefit is visible without opening the reference.
-- **GitHub Pages / mkdocs site** built from `docs/` for nicer browsing.
-- **HSM backing demo** (Nitrokey HSM 2 / SoftHSM) behind the same PKCS#11
-  interface, to show the KMS is swappable.
-- **Metrics/audit dashboard** sketch: parse `sshd` logs into a per-Key-ID
-  (human) access trail, which is one of certificates' biggest wins.
-- **NTP prerequisite call-out** wherever validity windows are discussed — clock
-  skew is a silent failure mode.
-
----
-
-### Suggested sequencing
-
-1. P0 (hygiene) → safe to publish and keep clean.
-2. P1.1 + P1.3 (real KMS signing + one-command PoC) → biggest credibility jump.
-3. P1.6 (automated assertions) + P2.3 (docs CI) → keeps it honest over time.
-4. Everything else as interest and time allow.
+- Comparison matrix rendered directly in the README.
+- GitHub Pages / mkdocs site built from `docs/`.
+- HSM backing demo (Nitrokey HSM 2 / SoftHSM) behind the same PKCS#11 interface.
+- Metrics/audit dashboard parsing `sshd` logs into a per-Key-ID access trail.
+- NTP prerequisite call-outs wherever validity windows are discussed.

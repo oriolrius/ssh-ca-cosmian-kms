@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['poc/**', 'services/**', 'ansible/**', 'examples/**', '.github/workflows/ci.yml']
+  pull_request:
+    paths: ['poc/**', 'services/**', 'ansible/**', 'examples/**', '.github/workflows/ci.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - run: shellcheck -S warning poc/scripts/*.sh poc/ssh-server/entrypoint.sh services/krl-distributor/host_puller.sh
+
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pipx install yamllint
+      - run: yamllint -d relaxed .
+
+  krl-service:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Unit tests (mocked KMS)
+        run: cd services/krl-distributor && uv run --quiet pytest -q
+
+  ansible-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pipx install "ansible-core" && pipx inject ansible-core ansible-lint || pip install --user ansible-core ansible-lint
+      - run: cd ansible && ~/.local/bin/ansible-lint --profile production || ansible-lint --profile production
+
+  poc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y bats
+      - name: Run UC1-UC9
+        run: cd poc && SSH_PORT=22022 bats test/uc.bats

@@ -1,0 +1,8 @@
+---
+# Handlers for role ssh_host_cert.
+
+- name: Restart sshd
+  ansible.builtin.service:
+    name: "{{ ssh_host_cert_sshd_service }}"
+    state: restarted
+  become: true
